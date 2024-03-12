@@ -109,10 +109,17 @@ void pwm_init(void)
 
 }
 
-void pwm_change_duty(const uint16_t comp_value)
+/*
+ * @brief Change the pwm's compare value
+ *
+ * @param comp_value - Campare value (Range between DEAD_TIME_IN_TICKS+1 and PERIOD_TICKS-DEAD_TIME_IN_TICKS-1)
+ * 
+ * @retval None 
+ */
+void pwm_change_duty(const uint32_t comp_value)
 {
-    uint16_t comp_A;
-    uint16_t comp_B;
+    uint32_t comp_A;
+    uint32_t comp_B;
 
     comp_A = comp_value + DEAD_TIME_IN_TICKS;
     comp_B = comp_value - DEAD_TIME_IN_TICKS;
