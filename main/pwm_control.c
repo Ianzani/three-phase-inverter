@@ -3,16 +3,15 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/mcpwm_prelude.h"
-#include "look_up_table.h"
 #include "pwm_control.h"
+
 
 #define RESOLUTION_HZ               (10000000)                      // 10MHz - 100ns per tick
 #define PERIOD_TICKS                (1000)                          // 1000 ticks = 100us = 1 period
 #define GPIO_NUM_A                  (42)
 #define GPIO_NUM_B                  (41)
-#define DEAD_TIME_IN_TICKS          (5)                             // 5 ticks = 0.5us
-#define COMP_A_VALUE_IN_TICKS       (250 + DEAD_TIME_IN_TICKS)      // 250 + 50 ticks = 30us
-#define COMP_B_VALUE_IN_TICKS       (250 - DEAD_TIME_IN_TICKS)      // 250 - 50 ticks = 20us
+#define DEAD_TIME_IN_TICKS          (3)                             // 3 ticks = 300ns (deadtime = 600ns)
+
 
 mcpwm_cmpr_handle_t comparator_A = NULL;
 mcpwm_cmpr_handle_t comparator_B = NULL;
@@ -74,8 +73,8 @@ void pwm_init(void)
 
     //VALOR DE COMPARACAO -------
     printf("Definindo valores de comparação\n");
-    mcpwm_comparator_set_compare_value(comparator_A, COMP_A_VALUE_IN_TICKS);
-    mcpwm_comparator_set_compare_value(comparator_B, COMP_B_VALUE_IN_TICKS);
+    mcpwm_comparator_set_compare_value(comparator_A, 0);
+    mcpwm_comparator_set_compare_value(comparator_B, 0);
     //---------------------------
 
     //ACAO DE COMPARACAO --------
@@ -109,21 +108,32 @@ void pwm_init(void)
 
 }
 
-/*
+/**
  * @brief Change the pwm's compare value
  *
- * @param comp_value - Campare value (Range between DEAD_TIME_IN_TICKS+1 and PERIOD_TICKS-DEAD_TIME_IN_TICKS-1)
+ * @param comp_value: Compare value (Range between 0 and PERIOD_TICKS/2)
  * 
  * @retval None 
  */
 void pwm_change_duty(const uint32_t comp_value)
 {
-    uint32_t comp_A;
-    uint32_t comp_B;
+    int32_t comp_A;
+    int32_t comp_B;
+    int32_t max_ticks = PERIOD_TICKS / 2;
 
-    comp_A = comp_value + DEAD_TIME_IN_TICKS;
-    comp_B = comp_value - DEAD_TIME_IN_TICKS;
+    comp_A = (int32_t)comp_value + DEAD_TIME_IN_TICKS;
+    comp_B = (int32_t)comp_value - DEAD_TIME_IN_TICKS;
 
-    mcpwm_comparator_set_compare_value(comparator_A, comp_A);
-    mcpwm_comparator_set_compare_value(comparator_B, comp_B);
+    if(comp_A >= max_ticks) {
+        comp_A = max_ticks;
+        comp_B = max_ticks;
+    }
+
+    if(comp_B <= 0) {
+        comp_A = 0;
+        comp_B = 0;    
+    }
+
+    mcpwm_comparator_set_compare_value(comparator_A, (uint32_t)comp_A);
+    mcpwm_comparator_set_compare_value(comparator_B, (uint32_t)comp_B);
 }

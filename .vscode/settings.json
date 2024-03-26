@@ -18,6 +18,9 @@
     "idf.flashType": "UART",
     "files.associations": {
         "compare": "cpp",
-        "task.h": "c"
+        "task.h": "c",
+        "cmath": "c",
+        "complex": "c",
+        "random": "c"
     }
 }
