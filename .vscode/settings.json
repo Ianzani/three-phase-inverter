@@ -17,6 +17,10 @@
     "idf.port": "/dev/ttyACM0",
     "idf.flashType": "UART",
     "files.associations": {
-        "compare": "cpp"
+        "compare": "cpp",
+        "task.h": "c",
+        "cmath": "c",
+        "complex": "c",
+        "random": "c"
     }
 }
