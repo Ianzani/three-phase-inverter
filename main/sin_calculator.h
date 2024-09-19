@@ -3,4 +3,6 @@
 
 void sin_init_timer(void);
 
+void sin_set_freq(const uint8_t freq_value);
+
 #endif

@@ -11,11 +11,11 @@
 gptimer_handle_t timer_handle = NULL;
 volatile uint8_t freq = 60;
 
-
+/* ------------------------------- Private Function ------------------------------- */
 static bool IRAM_ATTR ISR_timer_on_alarm(gptimer_handle_t timer, 
                                          const gptimer_alarm_event_data_t *edata, 
                                          void *user_ctx);
-
+/* -------------------------------------------------------------------------------- */
 
 /**
  * @brief Initialize a preiodic timer with 100us
@@ -50,7 +50,14 @@ void sin_init_timer(void)
     gptimer_start(timer_handle);
 }
 
-void sin_set_freq(uint8_t freq_value)
+/**
+ * @brief Freq setter
+ * 
+ * @param freq_value: Value to set
+ * 
+ * @retval None
+ */
+void sin_set_freq(const uint8_t freq_value)
 {   
     freq = freq_value;
 }
@@ -69,14 +76,13 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
                                const gptimer_alarm_event_data_t *edata, 
                                void *user_ctx)
 {
-    BaseType_t high_task_awoken = pdFALSE;
-
     static volatile int32_t master_index = 0;
 
-    uint16_t phase_1_index;
-    uint32_t phase_1_comp;
+    uint16_t phase_1_index = 0;
+    uint32_t phase_1_comp = 0;
 
-    master_index += (int32_t)freq * 18; /* (100 * 100 * freq * 1800) / (10^6) */
+    //TODO Change the freq to a float number
+    master_index += (int32_t)freq * 18; /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
 
     phase_1_index = (uint16_t)(master_index/100.0);
 
@@ -89,5 +95,5 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
 
     pwm_change_duty(phase_1_comp);
 
-    return (high_task_awoken == pdTRUE);
+    return pdFALSE;
 }

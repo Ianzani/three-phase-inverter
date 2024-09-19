@@ -117,8 +117,8 @@ void pwm_init(void)
  */
 void pwm_change_duty(const uint32_t comp_value)
 {
-    int32_t comp_A;
-    int32_t comp_B;
+    int32_t comp_A = 0;
+    int32_t comp_B = 0;
     int32_t max_ticks = PERIOD_TICKS / 2;
 
     comp_A = (int32_t)comp_value + DEAD_TIME_IN_TICKS;

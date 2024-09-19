@@ -1,6 +1,7 @@
 #ifndef LOOKUP_TABLE_H
 #define LOOKUP_TABLE_H
 
+/* Table with 1800 elements (0.2° per step)*/
 const uint16_t sine_lookup_table[] = {
 32768, 32882, 32996, 33111, 33225, 33339, 33454, 33568, 33682, 33797,
 33911, 34025, 34140, 34254, 34368, 34482, 34597, 34711, 34825, 34939,
