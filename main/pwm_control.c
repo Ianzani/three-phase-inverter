@@ -2,24 +2,34 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_log.h"
 #include "driver/mcpwm_prelude.h"
 #include "pwm_control.h"
 
 
 #define RESOLUTION_HZ               (10000000)                      // 10MHz - 100ns per tick
 #define PERIOD_TICKS                (1000)                          // 1000 ticks = 100us = 1 period
-#define GPIO_NUM_A                  (42)
-#define GPIO_NUM_B                  (41)
+#define GPIO_NUM_A1                 (42)
+#define GPIO_NUM_B1                 (41)
+#define GPIO_NUM_A2                 (40)
+#define GPIO_NUM_B2                 (39)
+#define GPIO_NUM_A3                 (38)
+#define GPIO_NUM_B3                 (37) 
 #define DEAD_TIME_IN_TICKS          (3)                             // 3 ticks = 300ns (deadtime = 600ns)
 
 
-mcpwm_cmpr_handle_t comparator_A = NULL;
-mcpwm_cmpr_handle_t comparator_B = NULL;
+const static char *tag = "PWM_CONTROL";
+
+static mcpwm_cmpr_handle_t comparator_A[NUM_OF_PHASES] = {};
+static mcpwm_cmpr_handle_t comparator_B[NUM_OF_PHASES] = {};
+
 
 void pwm_init(void)
 {
-    printf("Criando o timer\n");
-    mcpwm_timer_handle_t timer = NULL;
+    /* ------------------- Timers ------------------- */
+    ESP_LOGI(tag, "--Creating timers--");
+
+    mcpwm_timer_handle_t timer[NUM_OF_PHASES];
     mcpwm_timer_config_t timer_config = {
         .group_id = 0,
         .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
@@ -28,84 +38,102 @@ void pwm_init(void)
         .count_mode = MCPWM_TIMER_COUNT_MODE_UP_DOWN,
     };
 
-    mcpwm_new_timer(&timer_config, &timer);
-    printf("Timer criado com sucesso\n");
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        mcpwm_new_timer(&timer_config, &timer[i]);
+    }
+    /* ---------------------------------------------- */
 
-    printf("Criando operador\n");
-    mcpwm_oper_handle_t oper = NULL;
+    /* ------------------- Operators ------------------- */
+    ESP_LOGI(tag, "--Creating operators--");
+
+    mcpwm_oper_handle_t oper[NUM_OF_PHASES];
     mcpwm_operator_config_t oper_config = {
         .group_id = 0,
     };
 
-    mcpwm_new_operator(&oper_config, &oper);
-    printf("Operador criado com sucesso\n");
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        mcpwm_new_operator(&oper_config, &oper[i]);
+        mcpwm_operator_connect_timer(oper[i], timer[i]);
+    }
+    /* ------------------------------------------------- */
 
-    printf("Conectando operador ao timer\n");
-    mcpwm_operator_connect_timer(oper, timer);
+    /* ------------------- Comparators ------------------- */
+    ESP_LOGI(tag, "--Creating comparators--");
 
-    printf("Criando comparador e gerador\n");
-
-    //COMPARADORES----------------     
     mcpwm_comparator_config_t comparator_A_config = {
         .flags.update_cmp_on_tez = true,
     };
-    mcpwm_new_comparator(oper, &comparator_A_config, &comparator_A);
 
     mcpwm_comparator_config_t comparator_B_config = {
         .flags.update_cmp_on_tez = true,
     };
-    mcpwm_new_comparator(oper, &comparator_B_config, &comparator_B);
-    //---------------------------
 
-    // GERADORES ------------------
-    mcpwm_gen_handle_t gen_A = NULL;
-    mcpwm_generator_config_t gen_A_config = {
-        .gen_gpio_num = GPIO_NUM_A,
-    };
-    mcpwm_new_generator(oper, &gen_A_config, &gen_A);
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        mcpwm_new_comparator(oper[i], &comparator_A_config, &comparator_A[i]);
+        mcpwm_new_comparator(oper[i], &comparator_B_config, &comparator_B[i]);
+    }
+    /* --------------------------------------------------- */
 
-    mcpwm_gen_handle_t gen_B = NULL;
-    mcpwm_generator_config_t gen_B_config = {
-        .gen_gpio_num = GPIO_NUM_B,
-    };
-    mcpwm_new_generator(oper, &gen_B_config, &gen_B);
-    //---------------------------
+    /* ------------------- Generators------------------- */
+    ESP_LOGI(tag, "--Creating generators--");
 
-    //VALOR DE COMPARACAO -------
-    printf("Definindo valores de comparação\n");
-    mcpwm_comparator_set_compare_value(comparator_A, 0);
-    mcpwm_comparator_set_compare_value(comparator_B, 0);
-    //---------------------------
+    mcpwm_gen_handle_t gen_A[NUM_OF_PHASES] = {};
+    mcpwm_gen_handle_t gen_B[NUM_OF_PHASES] = {};
+    mcpwm_generator_config_t gen_A_config = {};
+    mcpwm_generator_config_t gen_B_config = {};
+    const int gen_gpios_A[3] = {GPIO_NUM_A1, GPIO_NUM_A2, GPIO_NUM_A3};
+    const int gen_gpios_B[3] = {GPIO_NUM_B1, GPIO_NUM_B2, GPIO_NUM_B3}; 
 
-    //ACAO DE COMPARACAO --------
-    printf("Configurando ações dos comparadores\n");                                                 
-    mcpwm_generator_set_action_on_compare_event(gen_A, 
-                                                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, 
-                                                                               comparator_A, 
-                                                                               MCPWM_GEN_ACTION_HIGH));
-        
-    mcpwm_generator_set_action_on_compare_event(gen_A, 
-                                                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, 
-                                                                               comparator_A, 
-                                                                               MCPWM_GEN_ACTION_LOW));
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        gen_A_config.gen_gpio_num = gen_gpios_A[i];
+        gen_B_config.gen_gpio_num = gen_gpios_B[i];
 
-    mcpwm_generator_set_action_on_compare_event(gen_B, 
-                                                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, 
-                                                                               comparator_B, 
-                                                                               MCPWM_GEN_ACTION_LOW));
-        
-    mcpwm_generator_set_action_on_compare_event(gen_B, 
-                                                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, 
-                                                                               comparator_B, 
-                                                                               MCPWM_GEN_ACTION_HIGH));
-    //-----------------------------
+        mcpwm_new_generator(oper[i], &gen_A_config, &gen_A[i]);
+        mcpwm_new_generator(oper[i], &gen_B_config, &gen_B[i]);
+    }
+    /* ------------------------------------------------ */
 
-    printf("Habilitando timer\n");
-    mcpwm_timer_enable(timer);
+    /* ------------------- Comparator Values ------------------- */
+    ESP_LOGI(tag, "--Defining comparator values--");
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        mcpwm_comparator_set_compare_value(comparator_A[i], 250);
+        mcpwm_comparator_set_compare_value(comparator_B[i], 250);
+    }
+    /* --------------------------------------------------------- */
 
-    printf("Iniciando o timer\n");
-    mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP);
+    /* ------------------- Comparator Actions ------------------- */
+    ESP_LOGI(tag, "--Defining comparator actions--");
 
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {                                             
+        mcpwm_generator_set_action_on_compare_event(gen_A[i], 
+                                                    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, 
+                                                                                comparator_A[i], 
+                                                                                MCPWM_GEN_ACTION_HIGH));
+            
+        mcpwm_generator_set_action_on_compare_event(gen_A[i], 
+                                                    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, 
+                                                                                comparator_A[i], 
+                                                                                MCPWM_GEN_ACTION_LOW));
+
+        mcpwm_generator_set_action_on_compare_event(gen_B[i], 
+                                                    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, 
+                                                                                comparator_B[i], 
+                                                                                MCPWM_GEN_ACTION_LOW));
+            
+        mcpwm_generator_set_action_on_compare_event(gen_B[i], 
+                                                    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, 
+                                                                                comparator_B[i], 
+                                                                                MCPWM_GEN_ACTION_HIGH));
+    }
+    /* ---------------------------------------------------------- */
+
+    /* ------------------- Starting Timers ------------------- */
+    ESP_LOGI(tag, "--Startin timers--");
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) { 
+        mcpwm_timer_enable(timer[i]);
+        mcpwm_timer_start_stop(timer[i], MCPWM_TIMER_START_NO_STOP);
+    }
+    /* ------------------------------------------------------- */
 }
 
 /**
@@ -115,25 +143,27 @@ void pwm_init(void)
  * 
  * @retval None 
  */
-void pwm_change_duty(const uint32_t comp_value)
+void pwm_change_duty(const uint32_t comp_value[NUM_OF_PHASES])
 {
     int32_t comp_A = 0;
     int32_t comp_B = 0;
     int32_t max_ticks = PERIOD_TICKS / 2;
 
-    comp_A = (int32_t)comp_value + DEAD_TIME_IN_TICKS;
-    comp_B = (int32_t)comp_value - DEAD_TIME_IN_TICKS;
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        comp_A = (int32_t)comp_value[i] + DEAD_TIME_IN_TICKS;
+        comp_B = (int32_t)comp_value[i] - DEAD_TIME_IN_TICKS;
 
-    if(comp_A >= max_ticks) {
-        comp_A = max_ticks;
-        comp_B = max_ticks;
+        if(comp_A >= max_ticks) {
+            comp_A = max_ticks;
+            comp_B = max_ticks;
+        }
+
+        if(comp_B <= 0) {
+            comp_A = 0;
+            comp_B = 0;    
+        }
+
+        mcpwm_comparator_set_compare_value(comparator_A[i], (uint32_t)comp_A);
+        mcpwm_comparator_set_compare_value(comparator_B[i], (uint32_t)comp_B);
     }
-
-    if(comp_B <= 0) {
-        comp_A = 0;
-        comp_B = 0;    
-    }
-
-    mcpwm_comparator_set_compare_value(comparator_A, (uint32_t)comp_A);
-    mcpwm_comparator_set_compare_value(comparator_B, (uint32_t)comp_B);
 }

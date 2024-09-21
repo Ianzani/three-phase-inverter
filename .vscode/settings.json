@@ -21,6 +21,7 @@
         "task.h": "c",
         "cmath": "c",
         "complex": "c",
-        "random": "c"
+        "random": "c",
+        "regex": "c"
     }
 }
