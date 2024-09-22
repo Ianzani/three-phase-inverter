@@ -23,6 +23,9 @@ const static char *tag = "PWM_CONTROL";
 static mcpwm_cmpr_handle_t comparator_A[NUM_OF_PHASES] = {};
 static mcpwm_cmpr_handle_t comparator_B[NUM_OF_PHASES] = {};
 
+/* -------------------- Private functions -------------------- */
+static void sync_timers(mcpwm_timer_handle_t timers[NUM_OF_PHASES]);
+/* ----------------------------------------------------------- */
 
 void pwm_init(void)
 {
@@ -134,6 +137,8 @@ void pwm_init(void)
         mcpwm_timer_start_stop(timer[i], MCPWM_TIMER_START_NO_STOP);
     }
     /* ------------------------------------------------------- */
+
+    sync_timers(timer);
 }
 
 /**
@@ -166,4 +171,41 @@ void pwm_change_duty(const uint32_t comp_value[NUM_OF_PHASES])
         mcpwm_comparator_set_compare_value(comparator_A[i], (uint32_t)comp_A);
         mcpwm_comparator_set_compare_value(comparator_B[i], (uint32_t)comp_B);
     }
+}
+
+/**
+ * @brief Synchronize the mcpwm timers
+ * 
+ * @param timers: A pointer to the timers to be synchronized
+ * 
+ * @retval None
+ */
+static void sync_timers(mcpwm_timer_handle_t timers[NUM_OF_PHASES])
+{
+    ESP_LOGI(tag, "Create software sync source");
+    mcpwm_sync_handle_t soft_sync_source = NULL;
+    mcpwm_soft_sync_config_t soft_sync_config = {};
+    mcpwm_new_soft_sync_src(&soft_sync_config, &soft_sync_source);
+
+    ESP_LOGI(tag, "Create timer sync source to propagate the sync event");
+    mcpwm_sync_handle_t timer_sync_source;
+    mcpwm_timer_sync_src_config_t timer_sync_config = {
+        .flags.propagate_input_sync = true,
+    };
+    mcpwm_new_timer_sync_src(timers[0], &timer_sync_config, &timer_sync_source);
+
+    ESP_LOGI(tag, "Set sync phase for timers");
+    mcpwm_timer_sync_phase_config_t sync_phase_config = {
+        .count_value = 0,
+        .direction = MCPWM_TIMER_DIRECTION_UP,
+        .sync_src = soft_sync_source,
+    };
+    mcpwm_timer_set_phase_on_sync(timers[0], &sync_phase_config);
+    sync_phase_config.sync_src = timer_sync_source;
+    for (uint8_t i = 1; i < NUM_OF_PHASES; i++) {
+        mcpwm_timer_set_phase_on_sync(timers[i], &sync_phase_config);
+    }
+
+    ESP_LOGI(tag, "Trigger the software sync event");
+    mcpwm_soft_sync_activate(soft_sync_source);
 }
