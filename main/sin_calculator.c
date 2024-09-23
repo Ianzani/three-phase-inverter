@@ -78,22 +78,34 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
 {
     static volatile int32_t master_index = 0;
 
-    uint16_t phase_1_index = 0;
-    uint32_t phase_1_comp = 0;
+    uint16_t phase_index[NUM_OF_PHASES] = {};
+    uint32_t phase_comp[NUM_OF_PHASES] = {};
 
     //TODO Change the freq to a float number
     master_index += (int32_t)freq * 18; /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
 
-    phase_1_index = (uint16_t)(master_index/100.0);
+    phase_index[0] = (uint16_t)(master_index/100.0);
+    phase_index[1] = phase_index[0] + 1200; /* +240° */
+    phase_index[2] = phase_index[0] + 600; /* +120° */
 
-    if(phase_1_index >= 1800) {
-        phase_1_index -= 1800;
+    if(phase_index[0] >= 1800) {
+        phase_index[0] -= 1800;
         master_index -= 180000;
     }
 
-    phase_1_comp =(uint16_t)((sine_lookup_table[phase_1_index] * 493.0) / 65535) + 4;
+    if(phase_index[1] >= 1800) {
+        phase_index[1] -= 1800;
+    }
 
-    pwm_change_duty(phase_1_comp);
+    if(phase_index[2] >= 1800) {
+        phase_index[2] -= 1800;
+    }
+
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        phase_comp[i] =(uint16_t)((sine_lookup_table[phase_index[i]] * 493.0) / 65535) + 4;
+    }
+    
+    pwm_change_duty(phase_comp);
 
     return pdFALSE;
 }

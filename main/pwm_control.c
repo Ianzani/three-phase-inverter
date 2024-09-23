@@ -99,8 +99,8 @@ void pwm_init(void)
     /* ------------------- Comparator Values ------------------- */
     ESP_LOGI(tag, "--Defining comparator values--");
     for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
-        mcpwm_comparator_set_compare_value(comparator_A[i], 250);
-        mcpwm_comparator_set_compare_value(comparator_B[i], 250);
+        mcpwm_comparator_set_compare_value(comparator_A[i], 0);
+        mcpwm_comparator_set_compare_value(comparator_B[i], 0);
     }
     /* --------------------------------------------------------- */
 
@@ -150,26 +150,29 @@ void pwm_init(void)
  */
 void pwm_change_duty(const uint32_t comp_value[NUM_OF_PHASES])
 {
-    int32_t comp_A = 0;
-    int32_t comp_B = 0;
+    int32_t comp_A[NUM_OF_PHASES] = {};
+    int32_t comp_B[NUM_OF_PHASES] = {};
     int32_t max_ticks = PERIOD_TICKS / 2;
 
     for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
-        comp_A = (int32_t)comp_value[i] + DEAD_TIME_IN_TICKS;
-        comp_B = (int32_t)comp_value[i] - DEAD_TIME_IN_TICKS;
+        comp_A[i]= (int32_t)comp_value[i] + DEAD_TIME_IN_TICKS;
+        comp_B[i] = (int32_t)comp_value[i] - DEAD_TIME_IN_TICKS;
 
-        if(comp_A >= max_ticks) {
-            comp_A = max_ticks;
-            comp_B = max_ticks;
+        if(comp_A[i] >= max_ticks) {
+            comp_A[i] = max_ticks;
+            comp_B[i] = max_ticks;
         }
 
-        if(comp_B <= 0) {
-            comp_A = 0;
-            comp_B = 0;    
+        if(comp_B[i] <= 0) {
+            comp_A[i] = 0;
+            comp_B[i] = 0;    
         }
+    }
 
-        mcpwm_comparator_set_compare_value(comparator_A[i], (uint32_t)comp_A);
-        mcpwm_comparator_set_compare_value(comparator_B[i], (uint32_t)comp_B);
+    /* This is made here trying to avoid desynchronization */
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        mcpwm_comparator_set_compare_value(comparator_A[i], (uint32_t)comp_A[i]);
+        mcpwm_comparator_set_compare_value(comparator_B[i], (uint32_t)comp_B[i]);
     }
 }
 
