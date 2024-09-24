@@ -131,7 +131,7 @@ void pwm_init(void)
     /* ---------------------------------------------------------- */
 
     /* ------------------- Starting Timers ------------------- */
-    ESP_LOGI(tag, "--Startin timers--");
+    ESP_LOGI(tag, "--Starting timers--");
     for (uint8_t i = 0; i < NUM_OF_PHASES; i++) { 
         mcpwm_timer_enable(timer[i]);
         mcpwm_timer_start_stop(timer[i], MCPWM_TIMER_START_NO_STOP);
@@ -185,7 +185,7 @@ void pwm_change_duty(const uint32_t comp_value[NUM_OF_PHASES])
  */
 static void sync_timers(mcpwm_timer_handle_t timers[NUM_OF_PHASES])
 {
-    ESP_LOGI(tag, "--Synchronizing timers");
+    ESP_LOGI(tag, "--Synchronizing timers--");
     mcpwm_sync_handle_t soft_sync_source = NULL;
     mcpwm_soft_sync_config_t soft_sync_config = {};
     mcpwm_new_soft_sync_src(&soft_sync_config, &soft_sync_source);

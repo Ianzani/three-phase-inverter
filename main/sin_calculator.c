@@ -8,13 +8,16 @@
 #include "pwm_control.h"
 
 
-gptimer_handle_t timer_handle = NULL;
-volatile uint8_t freq = 60;
+static TaskHandle_t sin_modulation_handle = NULL;
+static gptimer_handle_t timer_handle = NULL;
+static uint8_t freq = 60;
+
 
 /* ------------------------------- Private Function ------------------------------- */
 static bool IRAM_ATTR ISR_timer_on_alarm(gptimer_handle_t timer, 
                                          const gptimer_alarm_event_data_t *edata, 
                                          void *user_ctx);
+static void sin_modulation(void * params);
 /* -------------------------------------------------------------------------------- */
 
 /**
@@ -26,6 +29,9 @@ static bool IRAM_ATTR ISR_timer_on_alarm(gptimer_handle_t timer,
 */
 void sin_init_timer(void)
 {
+    /* Initialize the modulation task, which runs every 100us */
+    xTaskCreate(sin_modulation, "sin_modulation", 2048, NULL, 10, &sin_modulation_handle);
+    
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
         .direction = GPTIMER_COUNT_UP,
@@ -76,36 +82,55 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
                                const gptimer_alarm_event_data_t *edata, 
                                void *user_ctx)
 {
-    static volatile int32_t master_index = 0;
 
-    uint16_t phase_index[NUM_OF_PHASES] = {};
-    uint32_t phase_comp[NUM_OF_PHASES] = {};
-
-    //TODO Change the freq to a float number
-    master_index += (int32_t)freq * 18; /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
-
-    phase_index[0] = (uint16_t)(master_index/100.0);
-    phase_index[1] = phase_index[0] + 1200; /* +240° */
-    phase_index[2] = phase_index[0] + 600; /* +120° */
-
-    if(phase_index[0] >= 1800) {
-        phase_index[0] -= 1800;
-        master_index -= 180000;
-    }
-
-    if(phase_index[1] >= 1800) {
-        phase_index[1] -= 1800;
-    }
-
-    if(phase_index[2] >= 1800) {
-        phase_index[2] -= 1800;
-    }
-
-    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
-        phase_comp[i] =(uint16_t)((sine_lookup_table[phase_index[i]] * 493.0) / 65535) + 4;
-    }
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     
-    pwm_change_duty(phase_comp);
+    vTaskNotifyGiveFromISR(sin_modulation_handle, &xHigherPriorityTaskWoken);
 
-    return pdFALSE;
+    return xHigherPriorityTaskWoken;
+}
+
+/**
+ * @brief Realize the sine modulation
+ * 
+ * @param params: A pointer to task params
+ * 
+ * @retval None
+ */
+static void sin_modulation(void * params)
+{
+    int32_t master_index = 0;
+
+    while (true) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        uint16_t phase_index[NUM_OF_PHASES] = {};
+        uint32_t phase_comp[NUM_OF_PHASES] = {};
+
+        //TODO Change the freq to a float number
+        master_index += (int32_t)freq * 18; /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
+
+        phase_index[0] = (uint16_t)(master_index/100.0);
+        phase_index[1] = phase_index[0] + 1200; /* +240° */
+        phase_index[2] = phase_index[0] + 600; /* +120° */
+
+        if(phase_index[0] >= 1800) {
+            phase_index[0] -= 1800;
+            master_index -= 180000;
+        }
+
+        if(phase_index[1] >= 1800) {
+            phase_index[1] -= 1800;
+        }
+
+        if(phase_index[2] >= 1800) {
+            phase_index[2] -= 1800;
+        }
+
+        for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+            phase_comp[i] =(uint16_t)((sine_lookup_table[phase_index[i]] * 493.0) / 65535) + 4;
+        }
+        
+        pwm_change_duty(phase_comp);
+    }
 }
