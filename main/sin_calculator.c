@@ -4,16 +4,19 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/gptimer.h"
+#include "esp_log.h"
 #include "lookup_table.h"
 #include "pwm_control.h"
 
 
+static const char *tag = "SIN_CALCULATOR";
+
 static TaskHandle_t sin_modulation_handle = NULL;
 static gptimer_handle_t timer_handle = NULL;
-static uint8_t freq = 60;
+static float freq = 59.5;
 
 
-/* ------------------------------- Private Function ------------------------------- */
+/* ------------------------------- Private Functions ------------------------------- */
 static bool IRAM_ATTR ISR_timer_on_alarm(gptimer_handle_t timer, 
                                          const gptimer_alarm_event_data_t *edata, 
                                          void *user_ctx);
@@ -29,6 +32,8 @@ static void sin_modulation(void * params);
 */
 void sin_init_timer(void)
 {
+    ESP_LOGI(tag, "--Initializing sine modulation--");
+    
     /* Initialize the modulation task, which runs every 100us */
     xTaskCreate(sin_modulation, "sin_modulation", 2048, NULL, 10, &sin_modulation_handle);
     
@@ -63,7 +68,7 @@ void sin_init_timer(void)
  * 
  * @retval None
  */
-void sin_set_freq(const uint8_t freq_value)
+void sin_set_freq(const float freq_value)
 {   
     freq = freq_value;
 }
@@ -99,18 +104,18 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
  */
 static void sin_modulation(void * params)
 {
-    int32_t master_index = 0;
+    uint32_t master_index = 0;
 
     while (true) {
+        /* Wait the timer 100us ISR */
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
         uint16_t phase_index[NUM_OF_PHASES] = {};
         uint32_t phase_comp[NUM_OF_PHASES] = {};
 
-        //TODO Change the freq to a float number
-        master_index += (int32_t)freq * 18; /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
+        master_index += (uint32_t)(freq * 18.0 + 0.5); /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
 
-        phase_index[0] = (uint16_t)(master_index/100.0);
+        phase_index[0] = (uint16_t)(master_index / 100);
         phase_index[1] = phase_index[0] + 1200; /* +240° */
         phase_index[2] = phase_index[0] + 600; /* +120° */
 
