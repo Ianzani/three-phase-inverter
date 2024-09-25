@@ -5,6 +5,7 @@
 #include "pwm_control.h"
 #include "sin_calculator.h"
 
+
 void app_main(void)
 {
     pwm_init();

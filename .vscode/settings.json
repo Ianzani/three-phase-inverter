@@ -22,6 +22,9 @@
         "cmath": "c",
         "complex": "c",
         "random": "c",
-        "regex": "c"
+        "regex": "c",
+        "mcpwm_prelude.h": "c",
+        "pwm_control.h": "c",
+        "esp_log.h": "c"
     }
 }

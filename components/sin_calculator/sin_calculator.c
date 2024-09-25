@@ -13,7 +13,7 @@ static const char *tag = "SIN_CALCULATOR";
 
 static TaskHandle_t sin_modulation_handle = NULL;
 static gptimer_handle_t timer_handle = NULL;
-static float freq = 59.5;
+static float freq = 60;
 
 
 /* ------------------------------- Private Functions ------------------------------- */
@@ -24,7 +24,7 @@ static void sin_modulation(void * params);
 /* -------------------------------------------------------------------------------- */
 
 /**
- * @brief Initialize a preiodic timer with 100us
+ * @brief Initialize a periodic timer with 100us
  * 
  * @param None
  * 
