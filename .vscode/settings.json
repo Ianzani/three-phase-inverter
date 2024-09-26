@@ -28,6 +28,7 @@
         "esp_log.h": "c",
         "freertos.h": "c",
         "gptimer.h": "c",
-        "encoder.h": "c"
+        "encoder.h": "c",
+        "sin_calculator.h": "c"
     }
 }

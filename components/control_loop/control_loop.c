@@ -33,13 +33,13 @@ static gptimer_handle_t timer_handle = NULL;
 static TaskHandle_t run_control_loop_handle = NULL;
 static pi_controller_t pi_controller = {};
 
-static float freq_ref_rads = 0.0f; /* Reference frequency in rad/s */
+static float freq_ref_rads = 376.99f; /* Reference frequency in rad/s */
 
 
 /* ---------------------- Private functions ---------------------- */
 static void create_pi_controller(const float kp, const float ki, 
                                  const float saturation_value, 
-                                 const uint32_t sample_period_s,
+                                 const float sample_period_s,
                                  pi_controller_t * const pi_controller);
 
 static bool ISR_timer_on_alarm(gptimer_handle_t timer, 
@@ -127,7 +127,7 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
 static void create_pi_controller(const float kp, 
                                  const float ki, 
                                  const float saturation_value, 
-                                 const uint32_t sample_period_s,
+                                 const float sample_period_s,
                                  pi_controller_t * const pi_controller)
 {
     pi_controller->kp = kp;

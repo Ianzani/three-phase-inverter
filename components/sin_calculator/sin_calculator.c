@@ -7,13 +7,14 @@
 #include "esp_log.h"
 #include "lookup_table.h"
 #include "pwm_control.h"
+#include "sin_calculator.h"
 
 
 static const char *tag = "SIN_CALCULATOR";
 
 static TaskHandle_t sin_modulation_handle = NULL;
 static gptimer_handle_t timer_handle = NULL;
-static float freq = 60;
+static float freq_hz = 0;
 
 
 /* ------------------------------- Private Functions ------------------------------- */
@@ -62,15 +63,19 @@ void sin_init_timer(void)
 }
 
 /**
- * @brief Freq setter
+ * @brief Freq_hz setter
  * 
- * @param freq_value: Value to set
+ * @param freq_value_rads: Value to set in rad/s
  * 
  * @retval None
  */
-void sin_set_freq(const float freq_value)
+void sin_set_freq(float freq_value_rads)
 {   
-    freq = freq_value;
+    if (freq_value_rads < 0) {
+        freq_value_rads = 0;
+    }
+
+    freq_hz = freq_value_rads / HZ_TO_RADS;
 }
 
 /**
@@ -113,7 +118,7 @@ static void sin_modulation(void * params)
         uint16_t phase_index[NUM_OF_PHASES] = {};
         uint32_t phase_comp[NUM_OF_PHASES] = {};
 
-        master_index += (uint32_t)(freq * 18.0 + 0.5); /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
+        master_index += (uint32_t)(freq_hz * 18.0 + 0.5); /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
 
         phase_index[0] = (uint16_t)(master_index / 100);
         phase_index[1] = phase_index[0] + 1200; /* +240° */
