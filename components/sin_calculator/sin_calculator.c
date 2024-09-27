@@ -9,6 +9,9 @@
 #include "pwm_control.h"
 #include "sin_calculator.h"
 
+#define PERIODIC_TIME_RESOLUTION_HZ     (1000000U)
+#define TIMER_PERIOD_S                  (1e-4f)
+
 
 static const char *tag = "SIN_CALCULATOR";
 
@@ -41,7 +44,7 @@ void sin_init_timer(void)
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
         .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1000000
+        .resolution_hz = PERIODIC_TIME_RESOLUTION_HZ
     };
     gptimer_new_timer(&timer_config, &timer_handle);
 
@@ -54,7 +57,7 @@ void sin_init_timer(void)
 
     gptimer_alarm_config_t alarm_config = {
         .reload_count = 0,
-        .alarm_count = 100,
+        .alarm_count = TIMER_PERIOD_S * PERIODIC_TIME_RESOLUTION_HZ,
         .flags.auto_reload_on_alarm = true
     };
 
@@ -118,23 +121,23 @@ static void sin_modulation(void * params)
         uint16_t phase_index[NUM_OF_PHASES] = {};
         uint32_t phase_comp[NUM_OF_PHASES] = {};
 
-        master_index += (uint32_t)(freq_hz * 18.0 + 0.5); /* (100[scale] * 100[usec] * freq * 1800[points]) / (10^6)[sec] */
+        master_index += (uint32_t)(freq_hz * 1800.0 + 0.5); /* (1e4[scale] * 1e2[usec] * freq * 1800[points]) / (1e6)[sec] (+0.5 to round))*/
 
-        phase_index[0] = (uint16_t)(master_index / 100);
+        phase_index[0] = (uint16_t)(master_index / 10000);
         phase_index[1] = phase_index[0] + 1200; /* +240° */
         phase_index[2] = phase_index[0] + 600; /* +120° */
 
-        if(phase_index[0] >= 1800) {
-            phase_index[0] -= 1800;
-            master_index -= 180000;
+        if(phase_index[0] >= LOOKUP_TABLE_LEN) {
+            phase_index[0] -= LOOKUP_TABLE_LEN;
+            master_index -= 18000000;
         }
 
-        if(phase_index[1] >= 1800) {
-            phase_index[1] -= 1800;
+        if(phase_index[1] >= LOOKUP_TABLE_LEN) {
+            phase_index[1] -= LOOKUP_TABLE_LEN;
         }
 
-        if(phase_index[2] >= 1800) {
-            phase_index[2] -= 1800;
+        if(phase_index[2] >= LOOKUP_TABLE_LEN) {
+            phase_index[2] -= LOOKUP_TABLE_LEN;
         }
 
         for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
