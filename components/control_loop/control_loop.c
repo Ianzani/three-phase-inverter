@@ -197,7 +197,7 @@ static void run_control_loop(void * params)
         float encoder_value = counter_to_filtered_rads(encoder_read_state());
         float slip_freq = run_pi(freq_ref_rads - encoder_value);
 
-        sin_set_freq(slip_freq + encoder_value);
+        sin_set_values(slip_freq + encoder_value);
     }
 }
 

@@ -7,6 +7,6 @@
 
 void sin_init_timer(void);
 
-void sin_set_freq(const float freq_value_rads);
+void sin_set_values(const float freq_value_rads);
 
 #endif

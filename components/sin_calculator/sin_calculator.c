@@ -12,12 +12,19 @@
 #define PERIODIC_TIME_RESOLUTION_HZ     (1000000U)
 #define TIMER_PERIOD_S                  (1e-4f)
 
+#define NOMINAL_VOLTAGE_V               (220.0f)
+#define NOMINAL_FREQUENCY_HZ            (60.0f)
+#define ANGULAR_COEF_V_F                (NOMINAL_VOLTAGE_V / NOMINAL_FREQUENCY_HZ) /* 220V / 60Hz */
+#define MAX_AMPLITUDE_VALUE             (1.0f)
+#define MIN_AMPLITUDE_VALUE             (0.1f)
+
 
 static const char *tag = "SIN_CALCULATOR";
 
 static TaskHandle_t sin_modulation_handle = NULL;
 static gptimer_handle_t timer_handle = NULL;
 static float freq_hz = 0;
+static float amplitude = 0;
 
 
 /* ------------------------------- Private Functions ------------------------------- */
@@ -72,9 +79,21 @@ void sin_init_timer(void)
  * 
  * @retval None
  */
-void sin_set_freq(float freq_value_rads)
+void sin_set_values(float freq_value_rads)
 {   
     freq_hz = freq_value_rads / HZ_TO_RADS;
+
+    amplitude = (freq_hz * ANGULAR_COEF_V_F) / NOMINAL_VOLTAGE_V;
+
+    if (amplitude > MAX_AMPLITUDE_VALUE) {
+        amplitude = MAX_AMPLITUDE_VALUE;
+    }
+    else if (amplitude < MIN_AMPLITUDE_VALUE) {
+        amplitude = MIN_AMPLITUDE_VALUE;
+    }
+    else {
+        //Do nothing
+    }
 }
 
 /**
@@ -117,7 +136,7 @@ static void sin_modulation(void * params)
         uint16_t phase_index[NUM_OF_PHASES] = {};
         uint32_t phase_comp[NUM_OF_PHASES] = {};
 
-        /* (1e4[scale] * 1e2[usec] * freq * 1800[points]) / (1e6)[sec] (+0.5 to round))*/
+        /* (1e4[scale] * 1e2[usec] * freq * 1800[points]) / (1e6)[sec] (+/- 0.5 to round))*/
         master_index += (freq_hz >= 0) ? (int32_t)(freq_hz * 1800.0 + 0.5) : (int32_t)(freq_hz * 1800.0 - 0.5); 
 
         /* This is used to generate an underflow at the lookup table */
@@ -144,10 +163,12 @@ static void sin_modulation(void * params)
         }
 
         /* Here it's not used the full scale, due to deadtime */
+        /* TODO: Think better about this scale (x*(493/65535) + 4)*/
         for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
-            phase_comp[i] =(uint16_t)((sine_lookup_table[phase_index[i]] * 493.0) / 65535) + 4;
+            uint16_t sine_with_gain = (uint16_t)((amplitude * sine_lookup_table[phase_index[i]]) + ((1 - amplitude) * 32767));
+            phase_comp[i] =(uint16_t)((sine_with_gain * 493.0) / 65535) + 4;
         }
-        
+
         pwm_change_duty(phase_comp);
     }
 }
