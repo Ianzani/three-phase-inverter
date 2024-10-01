@@ -49,6 +49,8 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
 static void run_control_loop(void * params);
 
 static float run_pi(const float in_value);
+
+static float counter_to_filtered_rads(int32_t encoder_counter);
 /* --------------------------------------------------------------- */
 
 /**
@@ -192,9 +194,22 @@ static void run_control_loop(void * params)
     while (true) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-        float encoder_value = encoder_read_state();
+        float encoder_value = counter_to_filtered_rads(encoder_read_state());
         float slip_freq = run_pi(freq_ref_rads - encoder_value);
 
         sin_set_freq(slip_freq + encoder_value);
     }
+}
+
+static float counter_to_filtered_rads(int32_t encoder_counter)
+{ 
+    static float last_encoder_read = 0;
+
+    float encoder_read = (2 * PI_VALUE * (float)encoder_counter) / (pi_controller.sample_period_s * (float)EDGES_PER_ROTATION);
+
+    float encoder_read_filtered = 0.3 * encoder_read + last_encoder_read * 0.7; 
+    
+    last_encoder_read = encoder_read;
+
+    return encoder_read_filtered; 
 }

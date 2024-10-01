@@ -29,6 +29,7 @@
         "freertos.h": "c",
         "gptimer.h": "c",
         "encoder.h": "c",
-        "sin_calculator.h": "c"
+        "sin_calculator.h": "c",
+        "control_loop.h": "c"
     }
 }
