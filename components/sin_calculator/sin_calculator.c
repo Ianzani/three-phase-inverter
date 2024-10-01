@@ -74,10 +74,6 @@ void sin_init_timer(void)
  */
 void sin_set_freq(float freq_value_rads)
 {   
-    if (freq_value_rads < 0) {
-        freq_value_rads = 0;
-    }
-
     freq_hz = freq_value_rads / HZ_TO_RADS;
 }
 
@@ -112,7 +108,7 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
  */
 static void sin_modulation(void * params)
 {
-    uint32_t master_index = 0;
+    int32_t master_index = 0;
 
     while (true) {
         /* Wait the timer 100us ISR */
@@ -121,8 +117,15 @@ static void sin_modulation(void * params)
         uint16_t phase_index[NUM_OF_PHASES] = {};
         uint32_t phase_comp[NUM_OF_PHASES] = {};
 
-        master_index += (uint32_t)(freq_hz * 1800.0 + 0.5); /* (1e4[scale] * 1e2[usec] * freq * 1800[points]) / (1e6)[sec] (+0.5 to round))*/
+        /* (1e4[scale] * 1e2[usec] * freq * 1800[points]) / (1e6)[sec] (+0.5 to round))*/
+        master_index += (freq_hz >= 0) ? (int32_t)(freq_hz * 1800.0 + 0.5) : (int32_t)(freq_hz * 1800.0 - 0.5); 
 
+        /* This is used to generate an underflow at the lookup table */
+        if (master_index < 0) {
+            master_index += 18000000;
+        }
+
+        /* Calculate the phase indexs */
         phase_index[0] = (uint16_t)(master_index / 10000);
         phase_index[1] = phase_index[0] + 1200; /* +240° */
         phase_index[2] = phase_index[0] + 600; /* +120° */
@@ -140,6 +143,7 @@ static void sin_modulation(void * params)
             phase_index[2] -= LOOKUP_TABLE_LEN;
         }
 
+        /* Here it's not used the full scale, due to deadtime */
         for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
             phase_comp[i] =(uint16_t)((sine_lookup_table[phase_index[i]] * 493.0) / 65535) + 4;
         }
