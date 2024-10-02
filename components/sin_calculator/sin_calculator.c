@@ -83,7 +83,7 @@ void sin_set_values(float freq_value_rads)
 {   
     freq_hz = freq_value_rads / HZ_TO_RADS;
 
-    amplitude = (freq_hz * ANGULAR_COEF_V_F) / NOMINAL_VOLTAGE_V;
+    amplitude = (freq_hz >= 0) ? ((freq_hz * ANGULAR_COEF_V_F) / NOMINAL_VOLTAGE_V) : ((-1.0 * freq_hz * ANGULAR_COEF_V_F) / NOMINAL_VOLTAGE_V);
 
     if (amplitude > MAX_AMPLITUDE_VALUE) {
         amplitude = MAX_AMPLITUDE_VALUE;
