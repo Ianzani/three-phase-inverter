@@ -6,10 +6,13 @@
 #include "sin_calculator.h"
 #include "control_loop.h"
 #include "encoder.h"
+#include "can_interface.h"
 
 
 void app_main(void)
 {
+    can_interface_init();
+
     encoder_init();
     
     pwm_init();
