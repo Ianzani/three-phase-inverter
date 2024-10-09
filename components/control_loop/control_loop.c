@@ -17,6 +17,7 @@
 #define SAMPLE_PERIOD_PI_S              (1e-3f)
 
 #define PERIODIC_TIME_RESOLUTION_HZ     (1000000U)
+#define MAX_FREQ_REF_RADS               (377U) /* ~60Hz*/
 
 
 typedef struct {
@@ -34,6 +35,7 @@ static TaskHandle_t run_control_loop_handle = NULL;
 static pi_controller_t pi_controller = {};
 
 static float freq_ref_rads = 376.99f; /* Reference frequency in rad/s */
+static float encoder_value_rads = 0;
 
 
 /* ---------------------- Private functions ---------------------- */
@@ -91,6 +93,48 @@ void control_loop_init(void)
 
     gptimer_set_alarm_action(timer_handle, &alarm_config);
     gptimer_start(timer_handle);
+}
+
+/**
+ * @brief freq_ref_rads getter
+ * 
+ * @param None
+ * 
+ * @return freq_ref_rads in 10^2*rad/s
+ */
+uint16_t get_freq_ref_rads(void)
+{
+    return (uint16_t)(freq_ref_rads * 100);
+}
+
+/**
+ * @brief freq_ref_rads setter
+ * 
+ * @param value: Value to be set in 10^2*rad/s
+ * 
+ * @return None
+ */
+void set_freq_ref_rads(uint16_t value) 
+{
+    value /= 100;
+
+    if (value >= MAX_FREQ_REF_RADS) {
+        value = MAX_FREQ_REF_RADS;
+    }
+
+    freq_ref_rads = value;
+}
+
+/**
+ * @brief encoder_value_rads getter
+ * 
+ * @param None
+ * 
+ * @return encoder_value_rads in 10^2*rad/s
+ */
+uint16_t get_encoder_value_rads(void)
+{
+    return (uint16_t)(encoder_value_rads * 100);
 }
 
 /**
@@ -194,10 +238,10 @@ static void run_control_loop(void * params)
     while (true) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-        float encoder_value = counter_to_filtered_rads(encoder_read_state());
-        float slip_freq = run_pi(freq_ref_rads - encoder_value);
+        encoder_value_rads = counter_to_filtered_rads(encoder_read_state());
+        float slip_freq = run_pi(freq_ref_rads - encoder_value_rads);
 
-        sin_set_values(slip_freq + encoder_value);
+        sin_set_values(slip_freq + encoder_value_rads);
     }
 }
 

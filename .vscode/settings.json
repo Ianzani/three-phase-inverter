@@ -30,6 +30,19 @@
         "gptimer.h": "c",
         "encoder.h": "c",
         "sin_calculator.h": "c",
-        "control_loop.h": "c"
+        "control_loop.h": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "can_interface.h": "c",
+        "twai.h": "c",
+        "gpio.h": "c",
+        "twai_types.h": "c",
+        "clk_tree_defs.h": "c",
+        "soc_caps.h": "c",
+        "sdkconfig.h": "c"
     }
 }
