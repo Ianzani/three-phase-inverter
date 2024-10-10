@@ -18,6 +18,7 @@
 
 #define PERIODIC_TIME_RESOLUTION_HZ     (1000000U)
 #define MAX_FREQ_REF_RADS               (377U) /* ~60Hz*/
+#define MECHANICAL_TO_SYNC_FREQ         (2)
 
 
 typedef struct {
@@ -104,7 +105,7 @@ void control_loop_init(void)
  */
 uint16_t get_freq_ref_rads(void)
 {
-    return (uint16_t)(freq_ref_rads * 100);
+    return (uint16_t)(freq_ref_rads * 100 / MECHANICAL_TO_SYNC_FREQ);
 }
 
 /**
@@ -116,7 +117,7 @@ uint16_t get_freq_ref_rads(void)
  */
 void set_freq_ref_rads(uint16_t value) 
 {
-    float tmp_freq = value / 100.0;
+    float tmp_freq = MECHANICAL_TO_SYNC_FREQ * value / 100.0;
 
     if (tmp_freq >= MAX_FREQ_REF_RADS) {
         tmp_freq = MAX_FREQ_REF_RADS;
@@ -134,7 +135,7 @@ void set_freq_ref_rads(uint16_t value)
  */
 uint16_t get_encoder_value_rads(void)
 {
-    return (uint16_t)(encoder_value_rads * 100);
+    return (uint16_t)(encoder_value_rads * 100 / MECHANICAL_TO_SYNC_FREQ);
 }
 
 /**
@@ -238,7 +239,8 @@ static void run_control_loop(void * params)
     while (true) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-        encoder_value_rads = counter_to_filtered_rads(encoder_read_state());
+        encoder_value_rads = counter_to_filtered_rads(encoder_read_state()) * MECHANICAL_TO_SYNC_FREQ;
+
         float slip_freq = run_pi(freq_ref_rads - encoder_value_rads);
 
         sin_set_values(slip_freq + encoder_value_rads);
