@@ -9,8 +9,8 @@
 #include "can_interface.h"
 
 
-#define CAN_TX_GPIO                         (GPIO_NUM_17)
-#define CAN_RX_GPIO                         (GPIO_NUM_18)
+#define CAN_TX_GPIO                         (GPIO_NUM_20)
+#define CAN_RX_GPIO                         (GPIO_NUM_21)
 
 #define PROTOCOL_V_REF_PAYLOAD_BYTES        (2U)
 #define PROTOCOL_LIVE_DATA_PAYLOAD_BYTES    (8U)
@@ -45,7 +45,7 @@ void can_interface_init(void)
 
     twai_start();
 
-    xTaskCreate(can_transmit_data, "can_transmit_data", 2048, NULL, 5, NULL);
+    xTaskCreate(can_transmit_data, "can_transmit_data", 4056, NULL, 5, NULL);
     xTaskCreate(can_receive_data, "can_receive_data", 2048, NULL, 6, NULL);
 
     ESP_LOGI(tag, "--Can interface initialized--");

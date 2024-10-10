@@ -116,13 +116,13 @@ uint16_t get_freq_ref_rads(void)
  */
 void set_freq_ref_rads(uint16_t value) 
 {
-    value /= 100;
+    float tmp_freq = value / 100.0;
 
-    if (value >= MAX_FREQ_REF_RADS) {
-        value = MAX_FREQ_REF_RADS;
+    if (tmp_freq >= MAX_FREQ_REF_RADS) {
+        tmp_freq = MAX_FREQ_REF_RADS;
     }
 
-    freq_ref_rads = value;
+    freq_ref_rads = tmp_freq;
 }
 
 /**
