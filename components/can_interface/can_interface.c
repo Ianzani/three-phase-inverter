@@ -17,6 +17,8 @@
 #define V_REF_MESSAGE_ID                    (0x01U)
 #define LIVE_DATA_MESSAGE_ID                (0x10U)
 
+#define LIVE_DATA_PERIOD_MS                 (10U)
+
 
 static const char *tag = "CAN_INTERFACE";
 
@@ -76,7 +78,7 @@ static void can_transmit_data(void * params)
 
         twai_transmit(&live_data_message, pdMS_TO_TICKS(1));
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(LIVE_DATA_PERIOD_MS));
     }
 }
 
