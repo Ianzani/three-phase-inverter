@@ -6,6 +6,7 @@
 #include "driver/twai.h"
 #include "esp_log.h"
 #include "control_loop.h"
+#include "adc_interface.h"
 #include "can_interface.h"
 
 
@@ -125,9 +126,15 @@ static void build_live_data_message(uint8_t data[TWAI_FRAME_MAX_DLC])
 {
     uint16_t encoder_value = get_encoder_value_rads();
     uint16_t freq_ref = get_freq_ref_rads();
+    uint16_t bus_voltage = get_bus_voltage();
+    uint16_t stator_current = get_stator_current();
 
     data[0] = (uint8_t)(freq_ref & 0x00ff);
     data[1] = (uint8_t)((freq_ref & 0xff00) >> 8U);
     data[2] = (uint8_t)(encoder_value & 0x00ff);
     data[3] = (uint8_t)((encoder_value & 0xff00) >> 8U);
+    data[4] = (uint8_t)(stator_current & 0x00ff);
+    data[5] = (uint8_t)((stator_current & 0xff00) >> 8U);
+    data[6] = (uint8_t)(bus_voltage & 0x00ff);
+    data[7] = (uint8_t)((bus_voltage & 0xff00) >> 8U);
 }
