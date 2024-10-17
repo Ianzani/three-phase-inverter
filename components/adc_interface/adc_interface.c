@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -7,13 +8,17 @@
 #include "adc_interface.h"
 
 
-#define NUM_OF_ADC_CH                       (2U)
+#define NUM_OF_ADC_CH                       (3U)
 
 #define NUM_OF_MSG_PER_CONV                 (NUM_OF_ADC_CH)
 #define CONV_FRAME_SIZE_BYTES               (NUM_OF_MSG_PER_CONV * SOC_ADC_DIGI_DATA_BYTES_PER_CONV)
 #define MAX_NUM_OF_CONV_IN_BUFFER           (2U)
 #define MAX_ADC_BUF_LEN_BYTES               (MAX_NUM_OF_CONV_IN_BUFFER * CONV_FRAME_SIZE_BYTES)
 #define ADC_SAMPLE_FREQ_HZ                  (1000U)
+
+#define INVERSE_OF_SQUARE_ROOT_THREE        (0.57735f)
+#define ADC_TO_STATOR_CURRENT               (0.01f) /* To be defined */
+#define ADC_TO_BUS_VOLTAGE                  (0.1f) /* To be defined */
 
 
 typedef enum  {
@@ -23,7 +28,7 @@ typedef enum  {
 } adc_buffer_indexs_e;
 
 
-static const uint8_t adc_channels[NUM_OF_ADC_CH] = {ADC_CHANNEL_4, ADC_CHANNEL_5};
+static const uint8_t adc_channels[NUM_OF_ADC_CH] = {ADC_CHANNEL_4, ADC_CHANNEL_5, ADC_CHANNEL_6};
 
 static adc_continuous_handle_t adc_handle = NULL;
 static TaskHandle_t save_sensor_data_handle = NULL;
@@ -39,6 +44,8 @@ static bool IRAM_ATTR adc_conv_callback(adc_continuous_handle_t handle,
                                         void *user_data);
                                         
 static void save_sensor_data(void * params);
+static uint16_t calculate_peak_current(const uint16_t ia_adc, const uint16_t ib_adc);
+static inline uint16_t calculate_bus_voltage(const uint16_t bus_voltage_adc);
 /* ------------------------------------------------------------------- */
 
 /**
@@ -157,7 +164,35 @@ static void save_sensor_data(void * params)
 
         adc_digi_output_data_t *data = (adc_digi_output_data_t *)read_adc_buffer;
 
-        bus_voltage = data[BUS_VOLTAGE_INDEX].type2.data;
-        stator_current = data[STATOR_CURRENT_A_INDEX].type2.data;
+        bus_voltage = calculate_bus_voltage(data[BUS_VOLTAGE_INDEX].type2.data);
+        stator_current = calculate_peak_current(data[STATOR_CURRENT_A_INDEX].type2.data, data[STATOR_CURRENT_B_INDEX].type2.data);
     }
+}
+
+/**
+ * @brief Calculate peak current using adc ia and ib outputs
+ * 
+ * @param ia_adc: Adc value of phase A current
+ * @param ib_adc: Adc value of phase B current
+ * 
+ * @return The peak current in 10^2*A
+ */
+static uint16_t calculate_peak_current(const uint16_t ia_adc, const uint16_t ib_adc)
+{
+    float i_alpha = ia_adc * ADC_TO_STATOR_CURRENT;
+    float i_beta = (i_alpha * INVERSE_OF_SQUARE_ROOT_THREE) + (ib_adc * ADC_TO_STATOR_CURRENT * 2 * INVERSE_OF_SQUARE_ROOT_THREE);
+
+    return (uint16_t) (sqrt((i_alpha * i_alpha) + (i_beta * i_beta)) * 100);
+}
+
+/**
+ * @brief Calculate bus voltage using adc output
+ * 
+ * @param ia_adc: Adc value of bus voltage
+ * 
+ * @return The bus voltage in 10^2*V
+ */
+static inline uint16_t calculate_bus_voltage(const uint16_t bus_voltage_adc)
+{
+    return (uint16_t) (bus_voltage_adc * ADC_TO_BUS_VOLTAGE * 100);
 }
