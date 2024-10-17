@@ -7,10 +7,13 @@
 #include "control_loop.h"
 #include "encoder.h"
 #include "can_interface.h"
+#include "adc_interface.h"
 
 
 void app_main(void)
 {
+    adc_interface_init();
+
     can_interface_init();
 
     encoder_init();
