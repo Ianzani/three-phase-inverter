@@ -16,7 +16,13 @@ static const char* tag = "ENCODER";
 
 static pcnt_unit_handle_t pcnt_unit = NULL;
 
-
+/**
+ * @brief Initialize the pulse counter in quadrature mode
+ * 
+ * @param None
+ * 
+ * @return None
+ */
 void encoder_init(void) {
 
     ESP_LOGI(tag, "--Initializing pulse counter--");
@@ -59,7 +65,13 @@ void encoder_init(void) {
     pcnt_unit_start(pcnt_unit);
 }
 
-
+/**
+ * @brief Read the pulse counter value and flush it
+ * 
+ * @param None
+ * 
+ * @return Pulse counter value
+ */
 int32_t encoder_read_state(void)
 {
     int32_t counter = 0;

@@ -247,6 +247,13 @@ static void run_control_loop(void * params)
     }
 }
 
+/**
+ * @brief Transform encoder counter into rad/s value and apply a filter
+ * 
+ * @param encoder_counter: Encoder counter value
+ * 
+ * @retval Encoder value in filtered rad/s
+ */
 static float counter_to_filtered_rads(int32_t encoder_counter)
 { 
     static float last_encoder_read = 0;
