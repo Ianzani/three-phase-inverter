@@ -93,7 +93,7 @@ static void can_transmit_data(void * params)
 static void can_receive_data(void * params)
 {
     twai_message_t msg_received = {};
-    uint16_t new_freq_ref = 0;
+    int16_t new_freq_ref = 0;
 
     while (true) {
         
@@ -108,7 +108,7 @@ static void can_receive_data(void * params)
                 continue;
             }
 
-            new_freq_ref = msg_received.data[0] | ((uint16_t)msg_received.data[1] << 8U);
+            new_freq_ref = (int16_t)(msg_received.data[0] | (msg_received.data[1] << 8U));
 
             set_freq_ref_rads(new_freq_ref);
         }
@@ -124,8 +124,8 @@ static void can_receive_data(void * params)
  */
 static void build_live_data_message(uint8_t data[TWAI_FRAME_MAX_DLC])
 {
-    uint16_t encoder_value = get_encoder_value_rads();
-    uint16_t freq_ref = get_freq_ref_rads();
+    int16_t encoder_value = get_encoder_value_rads();
+    int16_t freq_ref = get_freq_ref_rads();
     uint16_t bus_voltage = get_bus_voltage();
     uint16_t stator_current = get_stator_current();
 

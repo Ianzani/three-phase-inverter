@@ -101,23 +101,23 @@ void control_loop_init(void)
  * 
  * @param None
  * 
- * @return freq_ref_rads in 10^2*rad/s
+ * @return freq_ref_rads in 10*rad/s
  */
-uint16_t get_freq_ref_rads(void)
+int16_t get_freq_ref_rads(void)
 {
-    return (uint16_t)(freq_ref_rads * 100 / MECHANICAL_TO_SYNC_FREQ);
+    return (int16_t)(freq_ref_rads * 10 / MECHANICAL_TO_SYNC_FREQ);
 }
 
 /**
  * @brief freq_ref_rads setter
  * 
- * @param value: Value to be set in 10^2*rad/s
+ * @param value: Value to be set in 10*rad/s
  * 
  * @return None
  */
-void set_freq_ref_rads(uint16_t value) 
+void set_freq_ref_rads(int16_t value) 
 {
-    float tmp_freq = MECHANICAL_TO_SYNC_FREQ * value / 100.0;
+    float tmp_freq = MECHANICAL_TO_SYNC_FREQ * value / 10.0;
 
     if (tmp_freq >= MAX_FREQ_REF_RADS) {
         tmp_freq = MAX_FREQ_REF_RADS;
@@ -131,11 +131,11 @@ void set_freq_ref_rads(uint16_t value)
  * 
  * @param None
  * 
- * @return encoder_value_rads in 10^2*rad/s
+ * @return encoder_value_rads in 10*rad/s
  */
-uint16_t get_encoder_value_rads(void)
+int16_t get_encoder_value_rads(void)
 {
-    return (uint16_t)(encoder_value_rads * 100 / MECHANICAL_TO_SYNC_FREQ);
+    return (int16_t)(encoder_value_rads * 10 / MECHANICAL_TO_SYNC_FREQ);
 }
 
 /**
