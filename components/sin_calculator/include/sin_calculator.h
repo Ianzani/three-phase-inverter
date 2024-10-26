@@ -9,4 +9,8 @@ void sin_init_timer(void);
 
 void sin_set_values(const float freq_value_rads);
 
+void start_sin_calculator(void);
+
+void turn_off_and_reset_sin_calulator(void);
+
 #endif

@@ -23,9 +23,11 @@ static const char *tag = "SIN_CALCULATOR";
 
 static TaskHandle_t sin_modulation_handle = NULL;
 static gptimer_handle_t timer_handle = NULL;
+
 static float freq_hz = 0;
 static float amplitude = 0;
 
+static bool sin_calculator_on = false;
 
 /* ------------------------------- Private Functions ------------------------------- */
 static bool IRAM_ATTR ISR_timer_on_alarm(gptimer_handle_t timer, 
@@ -97,6 +99,32 @@ void sin_set_values(float freq_value_rads)
 }
 
 /**
+ * @brief Allow sin_calculator to complete run your task
+ * 
+ * @param None
+ * 
+ * @return None
+ */
+void start_sin_calculator(void)
+{
+    sin_calculator_on = true;
+}
+
+/**
+ * @brief Not allow sin_calculator to complete run your task and reset your parameters
+ * 
+ * @param None
+ * 
+ * @return None
+ */
+void turn_off_and_reset_sin_calulator(void)
+{
+    sin_calculator_on = false;
+    freq_hz = 0;
+    amplitude = 0;
+}
+
+/**
  * @brief ISR's 100us periodic timer
  * 
  * @param timer : Timer's handle
@@ -132,6 +160,11 @@ static void sin_modulation(void * params)
     while (true) {
         /* Wait the timer 100us ISR */
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        if (!sin_calculator_on)
+        {
+            continue;
+        }
 
         uint16_t phase_index[NUM_OF_PHASES] = {};
         uint32_t phase_comp[NUM_OF_PHASES] = {};

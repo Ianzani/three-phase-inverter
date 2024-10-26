@@ -6,6 +6,7 @@
 #include "freertos/queue.h"
 #include "driver/gptimer.h"
 #include "esp_log.h"
+#include "manager.h"
 #include "encoder.h"
 #include "sin_calculator.h"
 #include "control_loop.h"
@@ -35,8 +36,10 @@ static gptimer_handle_t timer_handle = NULL;
 static TaskHandle_t run_control_loop_handle = NULL;
 static pi_controller_t pi_controller = {};
 
-static float freq_ref_rads = 376.99f; /* Reference frequency in rad/s */
+static float freq_ref_rads = 0.0f; /* Reference frequency in rad/s */
 static float encoder_value_rads = 0;
+
+static bool control_loop_on = false;
 
 
 /* ---------------------- Private functions ---------------------- */
@@ -51,9 +54,13 @@ static bool ISR_timer_on_alarm(gptimer_handle_t timer,
 
 static void run_control_loop(void * params);
 
-static float run_pi(const float in_value);
+static float run_pi(const float in_value, const bool reset_pi);
 
 static float counter_to_filtered_rads(int32_t encoder_counter);
+
+static bool is_control_system_turned_off(void);
+
+static bool is_control_system_turned_on(void);
 /* --------------------------------------------------------------- */
 
 /**
@@ -119,8 +126,43 @@ void set_freq_ref_rads(int16_t value)
 {
     float tmp_freq = MECHANICAL_TO_SYNC_FREQ * value / 10.0;
 
-    if (tmp_freq >= MAX_FREQ_REF_RADS) {
+    /* Turn off the control system */
+    if ((tmp_freq >= -0.01) || (tmp_freq <= 0.01))
+    {
+        if (is_control_system_turned_on())
+        {
+            turn_off_control_system();
+            freq_ref_rads = 0.0;
+        }
+
+        return;
+    }
+
+    /* Verify if the received reference frequency is valid */
+    if ((tmp_freq <= (MIN_FREQ_REF_RADS - 0.01)) || (tmp_freq >= (-MIN_FREQ_REF_RADS + 0.01)))
+    {
+        ESP_LOGW(tag, "INVALID REFERENCE FREQUENCY");
+        return;
+    }
+
+    /* Turn on the control system */
+    if (is_control_system_turned_off())
+    {
+        turn_on_control_system();
+    }
+
+    /* Saturate the reference frequency */
+    if (tmp_freq >= MAX_FREQ_REF_RADS) 
+    {
         tmp_freq = MAX_FREQ_REF_RADS;
+    }
+    else if (tmp_freq <= -MAX_FREQ_REF_RADS)
+    {
+        tmp_freq = -MAX_FREQ_REF_RADS;
+    }
+    else
+    {
+        //Do nothing
     }
 
     freq_ref_rads = tmp_freq;
@@ -136,6 +178,31 @@ void set_freq_ref_rads(int16_t value)
 int16_t get_encoder_value_rads(void)
 {
     return (int16_t)(encoder_value_rads * 10 / MECHANICAL_TO_SYNC_FREQ);
+}
+
+/**
+ * @brief Start running the control loop
+ * 
+ * @param None
+ * 
+ * @return None
+ */
+void start_control_loop(void)
+{
+    control_loop_on = true;
+}
+
+/**
+ * @brief Stop running the control loop and reset the internal PI values
+ * 
+ * @param None
+ * 
+ * @return None
+ */
+void turn_off_and_reset_control_loop(void)
+{
+    control_loop_on = false;
+    run_pi(0.0, true);
 }
 
 /**
@@ -190,11 +257,19 @@ static void create_pi_controller(const float kp,
  * 
  * @return The output value
  */
-static float run_pi(const float in_value)
+static float run_pi(const float in_value, const bool reset_pi)
 {
-    static float last_out_value = 0;
-    static float last_saturated_proporcional_value = 0;
+    static float last_out_value = 0.0;
+    static float last_saturated_proporcional_value = 0.0;
 
+    if (reset_pi)
+    {
+        last_out_value = 0.0;
+        last_saturated_proporcional_value = 0.0;
+
+        return 0.0;
+    }
+    
     float proportional_value = pi_controller.kp * in_value;
     float integral_value = pi_controller.ki * pi_controller.sample_period_s * in_value;
 
@@ -239,9 +314,14 @@ static void run_control_loop(void * params)
     while (true) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
+        if (!control_loop_on)
+        {
+            continue;
+        }
+
         encoder_value_rads = counter_to_filtered_rads(encoder_read_state()) * MECHANICAL_TO_SYNC_FREQ;
 
-        float slip_freq = run_pi(freq_ref_rads - encoder_value_rads);
+        float slip_freq = run_pi(freq_ref_rads - encoder_value_rads, false);
 
         sin_set_values(slip_freq + encoder_value_rads);
     }
@@ -265,4 +345,28 @@ static float counter_to_filtered_rads(int32_t encoder_counter)
     last_encoder_read = encoder_read;
 
     return encoder_read_filtered; 
+}
+
+/**
+ * @brief Verify if the system isn't running
+ * 
+ * @param None
+ * 
+ * @return A bool indicating the state
+ */
+static bool is_control_system_turned_off(void)
+{
+    return ((freq_ref_rads >= -0.1) || (freq_ref_rads <= 0.1));
+}
+
+/**
+ * @brief Verify if the system is running
+ * 
+ * @param None
+ * 
+ * @return A bool indicating the state
+ */
+static bool is_control_system_turned_on(void)
+{
+    return ((freq_ref_rads >= MIN_FREQ_REF_RADS - 0.1) || (freq_ref_rads <= -MIN_FREQ_REF_RADS + 0.1));
 }

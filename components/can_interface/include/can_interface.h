@@ -3,4 +3,8 @@
 
 void can_interface_init(void);
 
+void stop_receive_reference_message(void);
+
+void return_receive_reference_message(void);
+
 #endif

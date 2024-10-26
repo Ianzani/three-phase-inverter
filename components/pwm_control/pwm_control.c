@@ -8,7 +8,8 @@
 
 
 #define RESOLUTION_HZ               (10000000)                      // 10MHz - 100ns per tick
-#define PERIOD_TICKS                (1000)                          // 1000 ticks = 100us = 1 period
+#define PERIOD_TICKS                (1000UL)                        // 1000 ticks = 100us = 1 period
+#define MAX_INPUT_TICKS             (PERIOD_TICKS / 2)
 #define GPIO_NUM_A1                 (42)
 #define GPIO_NUM_B1                 (41)
 #define GPIO_NUM_A2                 (40)
@@ -98,10 +99,7 @@ void pwm_init(void)
 
     /* ------------------- Comparator Values ------------------- */
     ESP_LOGI(tag, "--Defining comparator values--");
-    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
-        mcpwm_comparator_set_compare_value(comparator_A[i], 0);
-        mcpwm_comparator_set_compare_value(comparator_B[i], 0);
-    }
+    turn_off_pwm_control_signal();
     /* --------------------------------------------------------- */
 
     /* ------------------- Comparator Actions ------------------- */
@@ -173,6 +171,21 @@ void pwm_change_duty(const uint32_t comp_value[NUM_OF_PHASES])
     for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
         mcpwm_comparator_set_compare_value(comparator_A[i], (uint32_t)comp_A[i]);
         mcpwm_comparator_set_compare_value(comparator_B[i], (uint32_t)comp_B[i]);
+    }
+}
+
+/**
+ * @brief Turn off all six control signals (set zero the duty-cycle)
+ * 
+ * @param None
+ * 
+ * @return None
+ */
+void turn_off_pwm_control_signal(void)
+{
+    for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
+        mcpwm_comparator_set_compare_value(comparator_A[i], 0ULL);
+        mcpwm_comparator_set_compare_value(comparator_B[i], MAX_INPUT_TICKS);
     }
 }
 

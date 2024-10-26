@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "manager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "pwm_control.h"
@@ -12,6 +13,8 @@
 
 void app_main(void)
 {
+    manager_init();
+    
     adc_interface_init();
 
     can_interface_init();

@@ -21,6 +21,8 @@
 #define LIVE_DATA_PERIOD_MS                 (10U)
 
 
+static bool is_to_receive_reference_message = true;
+
 static const char *tag = "CAN_INTERFACE";
 
 /* ------------------ Private Functions ------------------ */
@@ -52,6 +54,30 @@ void can_interface_init(void)
     xTaskCreate(can_receive_data, "can_receive_data", 2048, NULL, 6, NULL);
 
     ESP_LOGI(tag, "--Can interface initialized--");
+}
+
+/**
+ * @brief Make the can_interface stop to set the reference frequency received
+ * 
+ * @param None
+ * 
+ * @return None
+ */
+void stop_receive_reference_message(void)
+{
+    is_to_receive_reference_message = false;
+}
+
+/**
+ * @brief Make the can_interface return to set the reference frequency received
+ * 
+ * @param None
+ * 
+ * @return None
+ */
+void return_receive_reference_message(void)
+{
+    is_to_receive_reference_message = true;
 }
 
 /**
@@ -110,7 +136,10 @@ static void can_receive_data(void * params)
 
             new_freq_ref = (int16_t)(msg_received.data[0] | (msg_received.data[1] << 8U));
 
-            set_freq_ref_rads(new_freq_ref);
+            if (is_to_receive_reference_message)
+            {
+                set_freq_ref_rads(new_freq_ref);
+            }
         }
     }
 }
