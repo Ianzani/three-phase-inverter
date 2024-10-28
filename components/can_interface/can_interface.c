@@ -51,7 +51,7 @@ void can_interface_init(void)
     twai_start();
 
     xTaskCreate(can_transmit_data, "can_transmit_data", 4056, NULL, 5, NULL);
-    xTaskCreate(can_receive_data, "can_receive_data", 2048, NULL, 6, NULL);
+    xTaskCreate(can_receive_data, "can_receive_data", 4056, NULL, 6, NULL);
 
     ESP_LOGI(tag, "--Can interface initialized--");
 }

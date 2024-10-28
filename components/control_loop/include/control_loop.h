@@ -2,7 +2,7 @@
 #define CONTROL_LOOP_H
 
 
-#define MIN_FREQ_REF_RADS           (20.95f)
+#define MIN_FREQ_REF_RADS           (41.88f) /* ~200 RPM */
 
 
 void control_loop_init(void);

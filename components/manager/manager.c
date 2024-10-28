@@ -58,9 +58,9 @@ void manager_init(void)
  */
 void turn_on_control_system(void)
 {
-    manager_actions_e manager_action = TURN_ON;
+    static uint8_t manager_action = (uint8_t)TURN_ON;
 
-    if (xQueueSend(manager_queue, (uint8_t *)&manager_action, portMAX_DELAY) != pdPASS)
+    if (xQueueSend(manager_queue, &manager_action, portMAX_DELAY) != pdPASS)
     {
         ESP_LOGE(tag, "IT WAS NOT POSSIBLE ADDED A NEW ITEM INTO MANAGER QUEUE");
     }
@@ -75,9 +75,9 @@ void turn_on_control_system(void)
  */
 void turn_off_control_system(void)
 {
-    manager_actions_e manager_action = TURN_OFF;
+    static uint8_t manager_action = (uint8_t)TURN_OFF;
 
-    if (xQueueSend(manager_queue, (uint8_t *)&manager_action, portMAX_DELAY) != pdPASS)
+    if (xQueueSend(manager_queue, &manager_action, portMAX_DELAY) != pdPASS)
     {
         ESP_LOGE(tag, "IT WAS NOT POSSIBLE ADDED A NEW ITEM INTO MANAGER QUEUE");
     }
@@ -92,7 +92,7 @@ void turn_off_control_system(void)
  */
 static void run_manager(void *params)
 {
-    manager_actions_e manager_action;
+    uint8_t manager_action;
 
     while (true)
     {

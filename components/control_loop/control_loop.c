@@ -18,7 +18,7 @@
 #define SAMPLE_PERIOD_PI_S              (1e-3f)
 
 #define PERIODIC_TIME_RESOLUTION_HZ     (1000000U)
-#define MAX_FREQ_REF_RADS               (377U) /* ~60Hz*/
+#define MAX_FREQ_REF_RADS               (377.0f) /* ~60Hz*/
 #define MECHANICAL_TO_SYNC_FREQ         (2)
 
 
@@ -127,7 +127,7 @@ void set_freq_ref_rads(int16_t value)
     float tmp_freq = MECHANICAL_TO_SYNC_FREQ * value / 10.0;
 
     /* Turn off the control system */
-    if ((tmp_freq >= -0.01) || (tmp_freq <= 0.01))
+    if ((tmp_freq >= -0.01) && (tmp_freq <= 0.01))
     {
         if (is_control_system_turned_on())
         {
@@ -139,7 +139,7 @@ void set_freq_ref_rads(int16_t value)
     }
 
     /* Verify if the received reference frequency is valid */
-    if ((tmp_freq <= (MIN_FREQ_REF_RADS - 0.01)) || (tmp_freq >= (-MIN_FREQ_REF_RADS + 0.01)))
+    if ((tmp_freq <= (MIN_FREQ_REF_RADS - 0.1)) && (tmp_freq >= (-MIN_FREQ_REF_RADS + 0.1)))
     {
         ESP_LOGW(tag, "INVALID REFERENCE FREQUENCY");
         return;
@@ -356,7 +356,7 @@ static float counter_to_filtered_rads(int32_t encoder_counter)
  */
 static bool is_control_system_turned_off(void)
 {
-    return ((freq_ref_rads >= -0.1) || (freq_ref_rads <= 0.1));
+    return ((freq_ref_rads >= -0.1) && (freq_ref_rads <= 0.1));
 }
 
 /**
