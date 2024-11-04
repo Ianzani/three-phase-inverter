@@ -17,7 +17,10 @@
 #define ADC_SAMPLE_FREQ_HZ                  (1000U)
 
 #define INVERSE_OF_SQUARE_ROOT_THREE        (0.57735f)
-#define ADC_TO_STATOR_CURRENT               (0.01f) /* To be defined */
+#define ADC_TO_STATOR_CURRENT_A_GAIN        (0.00888f)
+#define ADC_TO_STATOR_CURRENT_A_OFFSET      (-16.8f)
+#define ADC_TO_STATOR_CURRENT_B_GAIN        (0.00518f)
+#define ADC_TO_STATOR_CURRENT_B_OFFSET      (-8.3f)
 #define ADC_TO_BUS_VOLTAGE                  (0.1f) /* To be defined */
 
 
@@ -163,7 +166,7 @@ static void save_sensor_data(void * params)
         adc_continuous_read(adc_handle, read_adc_buffer, CONV_FRAME_SIZE_BYTES, &num_of_bytes_read, 0);
 
         adc_digi_output_data_t *data = (adc_digi_output_data_t *)read_adc_buffer;
-
+       
         bus_voltage = calculate_bus_voltage(data[BUS_VOLTAGE_INDEX].type2.data);
         stator_current = calculate_peak_current(data[STATOR_CURRENT_A_INDEX].type2.data, data[STATOR_CURRENT_B_INDEX].type2.data);
     }
@@ -179,8 +182,9 @@ static void save_sensor_data(void * params)
  */
 static uint16_t calculate_peak_current(const uint16_t ia_adc, const uint16_t ib_adc)
 {
-    float i_alpha = ia_adc * ADC_TO_STATOR_CURRENT;
-    float i_beta = (i_alpha * INVERSE_OF_SQUARE_ROOT_THREE) + (ib_adc * ADC_TO_STATOR_CURRENT * 2 * INVERSE_OF_SQUARE_ROOT_THREE);
+    float i_alpha = (ia_adc * ADC_TO_STATOR_CURRENT_A_GAIN) + ADC_TO_STATOR_CURRENT_A_OFFSET;
+    float i_beta = (i_alpha * INVERSE_OF_SQUARE_ROOT_THREE) + 
+                   (((ib_adc * ADC_TO_STATOR_CURRENT_B_GAIN) + ADC_TO_STATOR_CURRENT_B_OFFSET) * 2 * INVERSE_OF_SQUARE_ROOT_THREE);
 
     return (uint16_t) (sqrt((i_alpha * i_alpha) + (i_beta * i_beta)) * 100);
 }
