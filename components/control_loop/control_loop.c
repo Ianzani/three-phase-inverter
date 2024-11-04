@@ -12,8 +12,8 @@
 #include "control_loop.h"
 
 
-#define KP_GAIN_PI                      (0.015f)
-#define KI_GAIN_PI                      (0.010f)
+#define KP_GAIN_PI                      (1.07684f)
+#define KI_GAIN_PI                      (1.54234f)
 #define SATURATION_VALUE_PI             (15.5f)
 #define SAMPLE_PERIOD_PI_S              (1e-3f)
 

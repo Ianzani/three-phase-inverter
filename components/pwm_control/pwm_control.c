@@ -184,8 +184,8 @@ void pwm_change_duty(const uint32_t comp_value[NUM_OF_PHASES])
 void turn_off_pwm_control_signal(void)
 {
     for (uint8_t i = 0; i < NUM_OF_PHASES; i++) {
-        mcpwm_comparator_set_compare_value(comparator_A[i], 0ULL);
-        mcpwm_comparator_set_compare_value(comparator_B[i], MAX_INPUT_TICKS);
+        mcpwm_comparator_set_compare_value(comparator_A[i], MAX_INPUT_TICKS);
+        mcpwm_comparator_set_compare_value(comparator_B[i], 0ULL);
     }
 }
 
