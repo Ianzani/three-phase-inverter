@@ -14,15 +14,17 @@
 #define CONV_FRAME_SIZE_BYTES               (NUM_OF_MSG_PER_CONV * SOC_ADC_DIGI_DATA_BYTES_PER_CONV)
 #define MAX_NUM_OF_CONV_IN_BUFFER           (2U)
 #define MAX_ADC_BUF_LEN_BYTES               (MAX_NUM_OF_CONV_IN_BUFFER * CONV_FRAME_SIZE_BYTES)
-#define ADC_SAMPLE_FREQ_HZ                  (1000U)
+#define ADC_SAMPLE_FREQ_HZ                  (3000U)
 
 #define INVERSE_OF_SQUARE_ROOT_THREE        (0.57735f)
 #define ADC_TO_STATOR_CURRENT_A_GAIN        (0.00888f)
 #define ADC_TO_STATOR_CURRENT_A_OFFSET      (-16.8f)
 #define ADC_TO_STATOR_CURRENT_B_GAIN        (0.00518f)
 #define ADC_TO_STATOR_CURRENT_B_OFFSET      (-8.3f)
-#define ADC_TO_BUS_VOLTAGE                  (0.1f) /* To be defined */
+#define ADC_TO_BUS_VOLTAGE_GAIN             (0.255f)
+#define ADC_TO_BUS_VOLTAGE_OFFSET           (-408.0f)
 
+#define LEN_RING_BUFFER                     (50U)
 
 typedef enum  {
     BUS_VOLTAGE_INDEX,
@@ -36,8 +38,9 @@ static const uint8_t adc_channels[NUM_OF_ADC_CH] = {ADC_CHANNEL_4, ADC_CHANNEL_5
 static adc_continuous_handle_t adc_handle = NULL;
 static TaskHandle_t save_sensor_data_handle = NULL;
 
-static uint16_t bus_voltage = 0;
-static uint16_t stator_current = 0;
+static uint16_t bus_voltage[LEN_RING_BUFFER] = {};
+static uint16_t stator_current[LEN_RING_BUFFER] = {};
+static uint8_t ring_buffer_index = 0;
 
 static const char *tag = "ADC_INTERFACE";
 
@@ -114,7 +117,14 @@ void adc_interface_init(void)
  */
 uint16_t get_bus_voltage(void) 
 {
-    return bus_voltage;
+    uint32_t bus_voltage_sum = 0;
+    
+    for (uint8_t i = 0; i < LEN_RING_BUFFER; i++)
+    {
+        bus_voltage_sum += bus_voltage[i];
+    }
+    
+    return bus_voltage_sum / LEN_RING_BUFFER;
 }
 
 /**
@@ -126,7 +136,14 @@ uint16_t get_bus_voltage(void)
  */
 uint16_t get_stator_current(void)
 {
-    return stator_current;
+    uint32_t stator_current_sum = 0;
+    
+    for (uint8_t i = 0; i < LEN_RING_BUFFER; i++)
+    {
+        stator_current_sum += stator_current[i];
+    }
+    
+    return stator_current_sum / LEN_RING_BUFFER;
 }
 
 /**
@@ -167,8 +184,13 @@ static void save_sensor_data(void * params)
 
         adc_digi_output_data_t *data = (adc_digi_output_data_t *)read_adc_buffer;
        
-        bus_voltage = calculate_bus_voltage(data[BUS_VOLTAGE_INDEX].type2.data);
-        stator_current = calculate_peak_current(data[STATOR_CURRENT_A_INDEX].type2.data, data[STATOR_CURRENT_B_INDEX].type2.data);
+        if (++ring_buffer_index >= LEN_RING_BUFFER)
+        {
+            ring_buffer_index = 0;
+        }
+
+        bus_voltage[ring_buffer_index] = calculate_bus_voltage(data[BUS_VOLTAGE_INDEX].type2.data);
+        stator_current[ring_buffer_index] = calculate_peak_current(data[STATOR_CURRENT_A_INDEX].type2.data, data[STATOR_CURRENT_B_INDEX].type2.data);
     }
 }
 
@@ -198,5 +220,5 @@ static uint16_t calculate_peak_current(const uint16_t ia_adc, const uint16_t ib_
  */
 static inline uint16_t calculate_bus_voltage(const uint16_t bus_voltage_adc)
 {
-    return (uint16_t) (bus_voltage_adc * ADC_TO_BUS_VOLTAGE * 100);
+    return (uint16_t) (((bus_voltage_adc * ADC_TO_BUS_VOLTAGE_GAIN) + ADC_TO_BUS_VOLTAGE_OFFSET) * 100);
 }
