@@ -19,7 +19,6 @@
 
 #define PERIODIC_TIME_RESOLUTION_HZ     (1000000U)
 #define MAX_FREQ_REF_RADS               (377.0f) /* ~60Hz*/
-#define MECHANICAL_TO_SYNC_FREQ         (2)
 
 
 typedef struct {
@@ -132,7 +131,6 @@ void set_freq_ref_rads(int16_t value)
         if (is_control_system_turned_on())
         {
             turn_off_control_system();
-            freq_ref_rads = 0.0;
         }
 
         return;
@@ -166,6 +164,18 @@ void set_freq_ref_rads(int16_t value)
     }
 
     freq_ref_rads = tmp_freq;
+}
+
+void set_freq_ref_rads_turn_off(void)
+{
+    if (freq_ref_rads > 0)
+    {
+        freq_ref_rads = MIN_FREQ_REF_RADS;
+    }
+    else 
+    {
+        freq_ref_rads = -MIN_FREQ_REF_RADS;
+    }
 }
 
 /**
@@ -202,6 +212,8 @@ void start_control_loop(void)
 void turn_off_and_reset_control_loop(void)
 {
     control_loop_on = false;
+    freq_ref_rads = 0.0;
+    encoder_value_rads = 0.0;
     run_pi(0.0, true);
 }
 

@@ -124,7 +124,7 @@ static void run_manager(void *params)
 static void first_step_turn_off_routine(void)
 {
     stop_receive_reference_message();
-    set_freq_ref_rads(10 * MIN_FREQ_REF_RADS);
+    set_freq_ref_rads_turn_off();
 }
 
 /**
